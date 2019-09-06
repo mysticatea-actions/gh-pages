@@ -1,0 +1,22 @@
+name: GitHub Pages
+author: Toru Nagashima
+description: An action that publishes GitHub Pages with a directory.
+inputs:
+  token:
+    description: Your GitHub token.
+    required: true
+  sourceDir:
+    description: The path to the directory that contains the pages content.
+    required: true
+  commitUserName:
+    description: The 'user.name' of git commits.
+    default: ''
+  commitUserEmail:
+    description: The 'user.email' of git commits.
+    default: ''
+  commitMessage:
+    description: The commit message.
+    default: ''
+runs:
+  using: node12
+  main: lib/index.js
