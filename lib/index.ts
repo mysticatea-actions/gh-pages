@@ -4,67 +4,76 @@ import * as core from "@actions/core"
 import { sync as glob } from "glob"
 import { cd, rmrf, sh, test } from "./shell"
 
+//------------------------------------------------------------------------------
+// Main
+//------------------------------------------------------------------------------
+
 const inputs = takeInputs()
 if (verifyInputs(inputs)) {
     publish(inputs)
 }
 
+//------------------------------------------------------------------------------
+// Helpers
+//------------------------------------------------------------------------------
+
 interface Inputs {
-    gitHubRepository: string
-    gitHubActor: string
-    gitHubToken: string
-    sourceDir: string
-    commitUserName: string
-    commitUserEmail: string
-    commitMessage: string
+    readonly repository: string
+    readonly actor: string
+    readonly token: string
+    readonly sourceDir: string
+    readonly commitUserName: string
+    readonly commitUserEmail: string
+    readonly commitMessage: string
 }
 
 function takeInputs(): Inputs {
-    const gitHubRepository = process.env.GITHUB_REPOSITORY || ""
-    const gitHubActor = process.env.GITHUB_ACTOR || ""
-    const gitHubToken = core.getInput("token", { required: true })
+    const repository = process.env.GITHUB_REPOSITORY || ""
+    const actor = process.env.GITHUB_ACTOR || ""
+    const token = core.getInput("token", { required: true })
     const sourceDir = path.resolve(
         core.getInput("sourceDir", { required: true }),
     )
-    const commitUserName = core.getInput("commitUserName") || gitHubActor
+    const commitUserName = core.getInput("commitUserName") || actor
     const commitUserEmail =
-        core.getInput("commitUserEmail") ||
-        `${gitHubActor}@users.noreply.github.com`
+        core.getInput("commitUserEmail") || `${actor}@users.noreply.github.com`
     const commitMessage = core.getInput("commitMessage") || "Update Website"
 
     return {
+        actor,
         commitMessage,
         commitUserEmail,
         commitUserName,
-        gitHubActor,
-        gitHubRepository,
-        gitHubToken,
+        repository,
         sourceDir,
+        token,
     }
 }
 
 function verifyInputs({
+    actor,
     commitMessage,
     commitUserEmail,
     commitUserName,
-    gitHubActor,
-    gitHubRepository,
-    gitHubToken,
+    repository,
     sourceDir,
+    token,
 }: Inputs): boolean {
-    if (!gitHubRepository) {
+    let badInput = false
+
+    if (!repository) {
         core.setFailed("Environment variable $GITHUB_REPOSITORY was not found.")
-        return false
+        badInput = true
     }
-    if (!gitHubActor) {
+    if (!actor) {
         core.setFailed("Environment variable $GITHUB_ACTOR was not found.")
-        return false
+        badInput = true
     }
 
     for (const [name, value] of [
-        ["Environment variable $GITHUB_REPOSITORY", gitHubRepository],
-        ["Environment variable $GITHUB_ACTOR", gitHubActor],
-        ["Input 'token'", gitHubToken],
+        ["Environment variable $GITHUB_REPOSITORY", repository],
+        ["Environment variable $GITHUB_ACTOR", actor],
+        ["Input 'token'", token],
         ["Input 'sourceDir'", sourceDir],
         ["Input 'commitUserName'", commitUserName],
         ["Input 'commitUserEmail'", commitUserEmail],
@@ -72,38 +81,38 @@ function verifyInputs({
     ]) {
         if (value.endsWith("\\")) {
             core.setFailed(`${name} must not end with a backslash.`)
-            return false
+            badInput = true
         }
         if (value.includes('"')) {
             core.setFailed(`${name} must not contain any double quotes.`)
-            return false
+            badInput = true
         }
     }
 
     if (!(fs.existsSync(sourceDir) && fs.statSync(sourceDir).isDirectory())) {
         core.setFailed("Input 'sourceDir' must point at a directory.")
-        return false
+        badInput = true
     }
     if (fs.existsSync(path.join(sourceDir, ".git"))) {
         core.setFailed(
             "The directory of input 'sourceDir' must not contain '.git'.",
         )
-        return false
+        badInput = true
     }
 
-    return true
+    return !badInput
 }
 
 function publish({
+    actor,
     commitMessage,
     commitUserEmail,
     commitUserName,
-    gitHubActor,
-    gitHubRepository,
-    gitHubToken,
+    repository,
     sourceDir,
+    token,
 }: Inputs): void {
-    const remoteUrl = `https://${gitHubActor}:${gitHubToken}@github.com/${gitHubRepository}.git`
+    const remoteUrl = `https://${actor}:${token}@github.com/${repository}.git`
 
     cd(sourceDir)
     sh("git init")
