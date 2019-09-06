@@ -1,0 +1,16 @@
+root: true
+extends:
+- plugin:@mysticatea/es2019
+- plugin:@mysticatea/+node
+
+rules:
+  no-process-env: "off"
+  no-void: "off"
+
+overrides:
+- files: scripts/**
+  rules:
+    no-console: "off"
+- files: scripts/release.ts
+  rules:
+    "@mysticatea/ts/unbound-method": "off"

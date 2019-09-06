@@ -1,0 +1,6 @@
+name: ActionName
+author: Toru Nagashima
+description: ActionDescription
+runs:
+  using: node12
+  main: lib/index.js
