@@ -55,7 +55,7 @@ try {
 // Fetch the new commit and tag.
 cd("..")
 if (isStable) {
-    sh(`git pull origin "${vNBranch}" "v${version}"`)
+    sh(`git fetch origin "${vNBranch}" "v${version}"`)
 } else {
-    sh(`git pull origin "v${version}"`)
+    sh(`git fetch origin "v${version}"`)
 }
