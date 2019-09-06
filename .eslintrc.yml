@@ -4,13 +4,6 @@ extends:
 - plugin:@mysticatea/+node
 
 rules:
+  no-console: "off"
   no-process-env: "off"
   no-void: "off"
-
-overrides:
-- files: scripts/**
-  rules:
-    no-console: "off"
-- files: scripts/release.ts
-  rules:
-    "@mysticatea/ts/unbound-method": "off"

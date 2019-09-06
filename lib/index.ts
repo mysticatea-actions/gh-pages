@@ -46,6 +46,10 @@ void (() => {
             return
         }
     }
+    if (!(fs.existsSync(SourceDir) && fs.statSync(SourceDir).isDirectory())) {
+        core.setFailed("Input 'sourceDir' must point at a directory.")
+        return
+    }
     if (fs.existsSync(path.join(SourceDir, ".git"))) {
         core.setFailed(
             "The directory of input 'sourceDir' must not contain '.git'.",
@@ -62,6 +66,10 @@ void (() => {
 
     // Commit files as an orphan.
     sh("git add .")
+    if (test("git diff --quiet --exit-code --staged")) {
+        console.log("No change found.")
+        return
+    }
     sh(`git commit -m "${CommitMessage}"`)
     // Fetch gh-pages.
     if (test("git fetch origin gh-pages")) {
