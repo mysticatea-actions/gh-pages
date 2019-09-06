@@ -1,8 +1,8 @@
 {
   "private": true,
-  "name": "",
+  "name": "gh-pages",
   "version": "0.0.0",
-  "description": "",
+  "description": "Publish GitHub Pages from a directory.",
   "engines": {
     "node": ">=12.0.0"
   },
@@ -11,17 +11,19 @@
     "lib"
   ],
   "dependencies": {
-    "@actions/core": "^1.0.0"
+    "@actions/core": "^1.0.0",
+    "glob": "^7.1.4",
+    "rimraf": "^3.0.0"
   },
   "devDependencies": {
     "@mysticatea/eslint-plugin": "^11.0.0",
+    "@types/glob": "^7.1.1",
     "@types/mocha": "^5.2.7",
     "@types/node": "^12.7.3",
     "@types/rimraf": "^2.0.2",
     "eslint": "^6.3.0",
     "mocha": "^6.2.0",
     "nyc": "^14.1.1",
-    "rimraf": "^3.0.0",
     "ts-node": "^8.3.0",
     "typescript": "^3.6.2"
   },
@@ -36,13 +38,13 @@
   },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/mysticatea-actions/manage-version-tags.git"
+    "url": "git+https://github.com/mysticatea-actions/gh-pages.git"
   },
   "keywords": [],
   "author": "Toru Nagashima <public@mysticatea.dev>",
   "license": "MIT",
   "bugs": {
-    "url": "https://github.com/mysticatea-actions/manage-version-tags/issues"
+    "url": "https://github.com/mysticatea-actions/gh-pages/issues"
   },
-  "homepage": "https://github.com/mysticatea-actions/manage-version-tags#readme"
+  "homepage": "https://github.com/mysticatea-actions/gh-pages#readme"
 }
