@@ -4,84 +4,150 @@ import * as core from "@actions/core"
 import { sync as glob } from "glob"
 import { cd, rmrf, sh, test } from "./shell"
 
-void (() => {
-    // Take inputs.
-    const GitHubRepository = process.env.GITHUB_REPOSITORY || ""
-    const GitHubActor = process.env.GITHUB_ACTOR || ""
-    const GitHubToken = core.getInput("token", { required: true })
-    const SourceDir = path.resolve(
+const inputs = takeInputs()
+if (verifyInputs(inputs)) {
+    publish(inputs)
+}
+
+interface Inputs {
+    gitHubRepository: string
+    gitHubActor: string
+    gitHubToken: string
+    sourceDir: string
+    commitUserName: string
+    commitUserEmail: string
+    commitMessage: string
+}
+
+function takeInputs(): Inputs {
+    const gitHubRepository = process.env.GITHUB_REPOSITORY || ""
+    const gitHubActor = process.env.GITHUB_ACTOR || ""
+    const gitHubToken = core.getInput("token", { required: true })
+    const sourceDir = path.resolve(
         core.getInput("sourceDir", { required: true }),
     )
-    const CommitUserName = core.getInput("commitUserName") || GitHubActor
-    const CommitUserEmail =
+    const commitUserName = core.getInput("commitUserName") || gitHubActor
+    const commitUserEmail =
         core.getInput("commitUserEmail") ||
-        `${GitHubActor}@users.noreply.github.com`
-    const CommitMessage = core.getInput("commitMessage") || "Update Website"
-    const RemoteUrl = `https://${GitHubActor}:${GitHubToken}@github.com/${GitHubRepository}.git`
+        `${gitHubActor}@users.noreply.github.com`
+    const commitMessage = core.getInput("commitMessage") || "Update Website"
 
-    // Verify.
-    if (!GitHubRepository) {
+    return {
+        commitMessage,
+        commitUserEmail,
+        commitUserName,
+        gitHubActor,
+        gitHubRepository,
+        gitHubToken,
+        sourceDir,
+    }
+}
+
+function verifyInputs({
+    commitMessage,
+    commitUserEmail,
+    commitUserName,
+    gitHubActor,
+    gitHubRepository,
+    gitHubToken,
+    sourceDir,
+}: Inputs): boolean {
+    if (!gitHubRepository) {
         core.setFailed("Environment variable $GITHUB_REPOSITORY was not found.")
-        return
+        return false
     }
-    if (!GitHubActor) {
+    if (!gitHubActor) {
         core.setFailed("Environment variable $GITHUB_ACTOR was not found.")
-        return
+        return false
     }
+
     for (const [name, value] of [
-        ["Environment variable $GITHUB_REPOSITORY", GitHubRepository],
-        ["Environment variable $GITHUB_ACTOR", GitHubActor],
-        ["Input 'token'", GitHubToken],
-        ["Input 'sourceDir'", SourceDir],
-        ["Input 'commitUserName'", CommitUserName],
-        ["Input 'commitUserEmail'", CommitUserEmail],
-        ["Input 'commitMessage'", CommitMessage],
+        ["Environment variable $GITHUB_REPOSITORY", gitHubRepository],
+        ["Environment variable $GITHUB_ACTOR", gitHubActor],
+        ["Input 'token'", gitHubToken],
+        ["Input 'sourceDir'", sourceDir],
+        ["Input 'commitUserName'", commitUserName],
+        ["Input 'commitUserEmail'", commitUserEmail],
+        ["Input 'commitMessage'", commitMessage],
     ]) {
         if (value.endsWith("\\")) {
             core.setFailed(`${name} must not end with a backslash.`)
-            return
+            return false
         }
         if (value.includes('"')) {
             core.setFailed(`${name} must not contain any double quotes.`)
-            return
+            return false
         }
     }
-    if (!(fs.existsSync(SourceDir) && fs.statSync(SourceDir).isDirectory())) {
+
+    if (!(fs.existsSync(sourceDir) && fs.statSync(sourceDir).isDirectory())) {
         core.setFailed("Input 'sourceDir' must point at a directory.")
-        return
+        return false
     }
-    if (fs.existsSync(path.join(SourceDir, ".git"))) {
+    if (fs.existsSync(path.join(sourceDir, ".git"))) {
         core.setFailed(
             "The directory of input 'sourceDir' must not contain '.git'.",
         )
-        return
+        return false
     }
 
-    // Main.
-    cd(SourceDir)
+    return true
+}
+
+function publish({
+    commitMessage,
+    commitUserEmail,
+    commitUserName,
+    gitHubActor,
+    gitHubRepository,
+    gitHubToken,
+    sourceDir,
+}: Inputs): void {
+    const remoteUrl = `https://${gitHubActor}:${gitHubToken}@github.com/${gitHubRepository}.git`
+
+    cd(sourceDir)
     sh("git init")
-    sh(`git config user.name "${CommitUserName}"`)
-    sh(`git config user.email "${CommitUserEmail}"`)
-    sh(`git remote add origin "${RemoteUrl}"`)
+    sh(`git config user.name "${commitUserName}"`)
+    sh(`git config user.email "${commitUserEmail}"`)
+    sh(`git remote add origin "${remoteUrl}"`)
 
     // Commit files as an orphan.
-    sh("git add .")
-    if (test("git diff --quiet --exit-code --staged")) {
-        console.log("No change found.")
+    if (commitFiles(commitMessage)) {
+        if (test("git fetch origin gh-pages")) {
+            // Rebase the commit to gh-pages HEAD.
+            sh("git checkout gh-pages")
+            rmrf(glob("!(.git)", { dot: true }).join(" "))
+            sh("git checkout master -- .")
+            commitFiles(commitMessage)
+            sh("git push origin gh-pages")
+        } else {
+            // Start gh-pages at the orphan commit.
+            sh("git push origin master:gh-pages")
+        }
         return
     }
-    sh(`git commit -m "${CommitMessage}"`)
-    // Fetch gh-pages.
+
+    // No content.
     if (test("git fetch origin gh-pages")) {
-        // Reset files and commit as HEAD of gh-pages.
+        // Remove files from gh-pages.
         sh("git checkout gh-pages")
         rmrf(glob("!(.git)", { dot: true }).join(" "))
-        sh("git checkout master -- .")
-        sh("git add .")
-        sh(`git commit -m "${CommitMessage}"`)
-    } else {
-        // Start gh-pages at the orphan commit if not found.
-        sh("git checkout -b gh-pages")
+        commitFiles(commitMessage)
+        sh("git push origin gh-pages")
+        return
     }
-    sh("git push origin gh-pages")
-})()
+
+    // No content and gh-pages was not found.
+    // Create gh-pages with empty commit.
+    sh(`git commit --allow-empty -m "${commitMessage}"`)
+    sh("git push origin master:gh-pages")
+}
+
+function commitFiles(commitMessage: string): boolean {
+    sh("git add .")
+    if (!test("git diff --quiet --exit-code --staged")) {
+        sh(`git commit -m "${commitMessage}"`)
+        return true
+    }
+    return false
+}
