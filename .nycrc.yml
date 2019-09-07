@@ -1,3 +1,8 @@
-require: [ts-node/register]
-include: [lib/**/*.ts]
-reporter: [lcov]
+extension:
+- .ts
+reporter:
+- text-summary
+- lcov
+require:
+- ts-node/register
+sourceMap: true

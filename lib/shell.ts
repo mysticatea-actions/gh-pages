@@ -1,28 +1,36 @@
-import { execSync } from "child_process"
-// TODO: switch to `fs.rmdirSync(x, {recursive: true})`
-import { sync as rimraf } from "rimraf"
+import util from "util"
+import { exec } from "@actions/exec"
+// TODO: switch to `fs.rmdir(x, {recursive: true})`
+import rimrafc from "rimraf"
 
-export function cd(path: string) {
+const rimraf = util.promisify(rimrafc)
+
+export function cd(path: string): void {
     console.log("$ cd", path)
     process.chdir(path)
 }
 
-export function sh(command: string) {
-    console.log("$", command)
-    execSync(command, { encoding: "utf8", stdio: "inherit" })
+export async function git(args: string): Promise<void> {
+    console.log("$ git", args)
+    await exec(`git ${args}`, undefined, {
+        silent: true,
+        listeners: {
+            stdout: chunk => process.stdout.write(chunk),
+            stderr: chunk => process.stdout.write(chunk),
+        },
+    })
 }
 
-export function test(command: string) {
-    console.log("$ test", command)
+export async function testGit(args: string): Promise<boolean> {
     try {
-        execSync(command, { encoding: "utf8", stdio: "inherit" })
+        await git(args)
         return true
     } catch {
         return false
     }
 }
 
-export function rmrf(glob: string) {
+export async function rmrf(glob: string): Promise<void> {
     console.log("$ rm -rf", glob)
-    rimraf(glob)
+    await rimraf(glob)
 }

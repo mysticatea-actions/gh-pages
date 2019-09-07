@@ -7,3 +7,11 @@ rules:
   no-console: "off"
   no-process-env: "off"
   no-void: "off"
+  no-unused-expressions:
+  - error
+  - allowTaggedTemplates: true
+
+overrides:
+- files: ["*.ts"]
+  rules:
+    no-redeclare: "off"
