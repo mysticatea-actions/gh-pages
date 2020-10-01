@@ -11,7 +11,7 @@
     "lib"
   ],
   "dependencies": {
-    "@actions/core": "^1.0.0",
+    "@actions/core": "^1.2.6",
     "@actions/exec": "^1.0.1",
     "glob": "^7.1.4",
     "rimraf": "^3.0.0"
